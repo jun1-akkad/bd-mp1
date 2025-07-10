@@ -2,7 +2,7 @@
   "name": "bd-mp1",
   "main": "main.js",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "BD-MP1 Controller Application",
   "author": "Akkad LLC",
@@ -11,8 +11,9 @@
     "build": "vite build",
     "electron": "electron .",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron-build": "npm run build && electron-builder",
-    "electron-pack": "electron-builder"
+    "clean": "rimraf dist",
+    "electron-build": "npm run clean && npm run build && electron-builder",
+    "electron-pack": "npm run clean && electron-builder"
   },
   "build": {
     "appId": "jp.akkad.bd-mp1",
@@ -26,6 +27,7 @@
       "preload.cjs",
       "dist/**/*"
     ],
+    "extraResources": [],
     "mac": {
       "target": [
         "dmg"
@@ -57,6 +59,7 @@
     "electron": "^37.2.0",
     "electron-builder": "^26.0.12",
     "postcss": "^8.5.6",
+    "rimraf": "^6.0.1",
     "vite": "^7.0.0",
     "wait-on": "^7.2.0"
   }
