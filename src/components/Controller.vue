@@ -59,6 +59,31 @@ const stop = () => {
   emit('stop')
 }
 
+// キーボードイベントハンドラー
+const handleKeydown = (event) => {
+  if (event.key === 'Enter') {
+    // エンターキーでplay
+    event.preventDefault()
+    play()
+  } else if (event.key === ' ') {
+    // スペースキーで一時停止
+    event.preventDefault()
+    sendCommand('PAS')
+  } else if (event.key === 'ArrowLeft') {
+    // 左矢印キーで前進
+    event.preventDefault()
+    sendCommand('SKPPV')
+  } else if (event.key === 'ArrowRight') {
+    // 右矢印キーで後退
+    event.preventDefault()
+    sendCommand('SKPNX')
+  } else if (event.key === 'Escape') {
+    // エスケープキーで停止
+    event.preventDefault()
+    stop()
+  }
+}
+
 // pause状態の監視
 watch(() => props.currentStatus, (newStatus) => {
   if (newStatus === 'pause') {
@@ -96,11 +121,16 @@ onMounted(() => {
   if (props.currentStatus === 'pause') {
     startBlinking()
   }
+
+  // キーボードイベントリスナーを追加
+  document.addEventListener('keydown', handleKeydown)
 })
 
 // コンポーネントのアンマウント時
 onUnmounted(() => {
   stopBlinking()
+  // キーボードイベントリスナーを削除
+  document.removeEventListener('keydown', handleKeydown)
 })
 </script>
 

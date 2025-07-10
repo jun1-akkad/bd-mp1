@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const fs = require('fs');
 const net = require('net');
+const { exec } = require('child_process');
+const os = require('os');
 
 // ネットワーク接続を管理するための変数
 let socket = null;
@@ -54,6 +56,274 @@ const stopCommandTimer = () => {
     commandTimer = null;
   }
   isProcessingQueue = false;
+};
+
+// MacアドレスからIPアドレスを取得する関数
+const getIpFromMacAddress = (macAddress) => {
+  return new Promise((resolve, reject) => {
+    const platform = os.platform();
+
+    if (platform === 'darwin') {
+      // macOSの場合
+      exec('arp -a', (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        const lines = stdout.split('\n');
+        for (const line of lines) {
+          if (line.includes(macAddress.toLowerCase()) || line.includes(macAddress.toUpperCase())) {
+            const match = line.match(/\(([0-9.]+)\)/);
+            if (match) {
+              resolve(match[1]);
+              return;
+            }
+          }
+        }
+        resolve(null);
+      });
+    } else if (platform === 'win32') {
+      // Windowsの場合
+      exec('arp -a', (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        const lines = stdout.split('\n');
+        for (const line of lines) {
+          if (line.includes(macAddress.toLowerCase()) || line.includes(macAddress.toUpperCase())) {
+            const match = line.match(/([0-9.]+)/);
+            if (match) {
+              resolve(match[1]);
+              return;
+            }
+          }
+        }
+        resolve(null);
+      });
+    } else {
+      // Linuxの場合
+      exec('arp -a', (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        const lines = stdout.split('\n');
+        for (const line of lines) {
+          if (line.includes(macAddress.toLowerCase()) || line.includes(macAddress.toUpperCase())) {
+            const match = line.match(/\(([0-9.]+)\)/);
+            if (match) {
+              resolve(match[1]);
+              return;
+            }
+          }
+        }
+        resolve(null);
+      });
+    }
+  });
+};
+
+// ネットワーク内のすべてのデバイスをスキャンする関数
+const scanNetworkDevices = () => {
+  return new Promise((resolve, reject) => {
+    const platform = os.platform();
+    const networkInterface = getDefaultNetworkInterface();
+
+    if (!networkInterface) {
+      reject(new Error('ネットワークインターフェースが見つかりません'));
+      return;
+    }
+
+    const baseIp = networkInterface.address.replace(/\d+$/, '');
+    const foundDevices = [];
+
+    // ネットワークスキャン
+    const scanPromises = [];
+    for (let i = 1; i <= 254; i++) {
+      const ip = `${baseIp}${i}`;
+      scanPromises.push(pingAndGetMac(ip));
+    }
+
+    Promise.allSettled(scanPromises).then((results) => {
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) {
+          foundDevices.push(result.value);
+        }
+      }
+      resolve(foundDevices);
+    });
+  });
+};
+
+// 特定のIPアドレスにpingしてMACアドレスを取得
+const pingAndGetMac = (ip) => {
+  return new Promise((resolve) => {
+    const platform = os.platform();
+    const pingCmd = platform === 'win32' ? `ping -n 1 -w 1000 ${ip}` : `ping -c 1 -W 1 ${ip}`;
+
+    exec(pingCmd, (error) => {
+      if (error) {
+        resolve(null);
+        return;
+      }
+
+      // pingが成功した場合、ARPテーブルでMACアドレスを確認
+      getMacFromIp(ip).then((macAddress) => {
+        if (macAddress) {
+          resolve({ ip, mac: macAddress });
+        } else {
+          resolve(null);
+        }
+      }).catch(() => {
+        resolve(null);
+      });
+    });
+  });
+};
+
+// IPアドレスからMACアドレスを取得する関数
+const getMacFromIp = (ipAddress) => {
+  return new Promise((resolve, reject) => {
+    const platform = os.platform();
+
+    if (platform === 'darwin') {
+      // macOSの場合
+      exec('arp -a', (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        const lines = stdout.split('\n');
+        for (const line of lines) {
+          if (line.includes(ipAddress)) {
+            const match = line.match(/([0-9a-fA-F]{1,2}[:-]){5}([0-9a-fA-F]{1,2})/);
+            if (match) {
+              resolve(match[0]);
+              return;
+            }
+          }
+        }
+        resolve(null);
+      });
+    } else if (platform === 'win32') {
+      // Windowsの場合
+      exec('arp -a', (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        const lines = stdout.split('\n');
+        for (const line of lines) {
+          if (line.includes(ipAddress)) {
+            const match = line.match(/([0-9a-fA-F]{1,2}-){5}([0-9a-fA-F]{1,2})/);
+            if (match) {
+              resolve(match[0]);
+              return;
+            }
+          }
+        }
+        resolve(null);
+      });
+    } else {
+      // Linuxの場合
+      exec('arp -a', (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        const lines = stdout.split('\n');
+        for (const line of lines) {
+          if (line.includes(ipAddress)) {
+            const match = line.match(/([0-9a-fA-F]{1,2}:){5}([0-9a-fA-F]{1,2})/);
+            if (match) {
+              resolve(match[0]);
+              return;
+            }
+          }
+        }
+        resolve(null);
+      });
+    }
+  });
+};
+
+// ネットワークスキャンでデバイスを検索する関数
+const scanNetworkForDevice = (targetMacAddress) => {
+  return new Promise((resolve, reject) => {
+    const platform = os.platform();
+    const networkInterface = getDefaultNetworkInterface();
+
+    if (!networkInterface) {
+      reject(new Error('ネットワークインターフェースが見つかりません'));
+      return;
+    }
+
+    const baseIp = networkInterface.address.replace(/\d+$/, '');
+    const foundDevices = [];
+
+    // ネットワークスキャン（簡易版）
+    const scanPromises = [];
+    for (let i = 1; i <= 254; i++) {
+      const ip = `${baseIp}${i}`;
+      scanPromises.push(pingAndCheckMac(ip, targetMacAddress));
+    }
+
+    Promise.allSettled(scanPromises).then((results) => {
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) {
+          foundDevices.push(result.value);
+        }
+      }
+      resolve(foundDevices);
+    });
+  });
+};
+
+// デフォルトネットワークインターフェースを取得
+const getDefaultNetworkInterface = () => {
+  const interfaces = os.networkInterfaces();
+  for (const name in interfaces) {
+    const iface = interfaces[name];
+    for (const alias of iface) {
+      if (alias.family === 'IPv4' && !alias.internal) {
+        return alias;
+      }
+    }
+  }
+  return null;
+};
+
+// 特定のIPアドレスにpingしてMacアドレスを確認
+const pingAndCheckMac = (ip, targetMac) => {
+  return new Promise((resolve) => {
+    const platform = os.platform();
+    const pingCmd = platform === 'win32' ? `ping -n 1 -w 1000 ${ip}` : `ping -c 1 -W 1 ${ip}`;
+
+    exec(pingCmd, (error) => {
+      if (error) {
+        resolve(null);
+        return;
+      }
+
+      // pingが成功した場合、ARPテーブルでMacアドレスを確認
+      getIpFromMacAddress(targetMac).then((foundIp) => {
+        if (foundIp === ip) {
+          resolve({ ip, mac: targetMac });
+        } else {
+          resolve(null);
+        }
+      }).catch(() => {
+        resolve(null);
+      });
+    });
+  });
 };
 
 // contextBridgeを通じてAPIを提供
@@ -171,5 +441,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // アプリケーションを終了
   closeApp: () => {
     ipcRenderer.send('close-app');
+  },
+
+  // MacアドレスからIPアドレスを取得
+  getIpFromMacAddress: (macAddress) => {
+    return getIpFromMacAddress(macAddress);
+  },
+
+  // ネットワークスキャンでデバイスを検索
+  scanNetworkForDevice: (macAddress) => {
+    return scanNetworkForDevice(macAddress);
+  },
+
+  // ネットワーク内のすべてのデバイスをスキャン
+  scanNetworkDevices: () => {
+    return scanNetworkDevices();
   }
 });

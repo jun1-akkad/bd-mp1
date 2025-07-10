@@ -34,7 +34,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import sendCommand from '../utils/sendCommand'
 
 const props = defineProps({
@@ -72,12 +72,23 @@ const props = defineProps({
   }
 })
 
-const elapseTimeStr = computed(() => {
-  return timeToStr(props.elapseTime)
+const elapseTimeStr = ref('')
+const remainTimeStr = ref('')
+let updateInterval = null
+
+const update = () => {
+  elapseTimeStr.value = timeToStr(props.elapseTime)
+  remainTimeStr.value = timeToStr(props.remainTime)
+}
+
+onMounted(() => {
+  updateInterval = setInterval(update, 1000)
 })
 
-const remainTimeStr = computed(() => {
-  return timeToStr(props.remainTime)
+onUnmounted(() => {
+  if (updateInterval) {
+    clearInterval(updateInterval)
+  }
 })
 
 const timeToStr = (hhmmss) => {
@@ -96,7 +107,6 @@ const timeToStr = (hhmmss) => {
 const getTrackStatus = () => {
   sendCommand('?SET')  // 8 Elapse Time
   sendCommand('?SRT')  // 9 Remain Time
-  console.log('getStatus')
 }
 
 const getStatus = () => {

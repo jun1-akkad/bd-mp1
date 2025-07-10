@@ -7,5 +7,7 @@ interface Window {
     disconnect: () => void
     writeFile: (filePath: string, data: string) => Promise<void>
     readFile: (filePath: string) => Promise<string>
+    getIpFromMacAddress: (macAddress: string) => Promise<string | null>
+    scanNetworkForDevice: (macAddress: string) => Promise<Array<{ip: string, mac: string}>>
   }
 }

@@ -166,7 +166,9 @@ const handleResponseData = (r) => {
       currentStatus.value = 'track menu'
     } else if (r === 'SSTDVHM') {
       currentStatus.value = 'home'
-      stopped.value = true
+      stopped.value = false
+      trackNumber.value = ''
+      groupNumber.value = ''
     }
     return
   }
@@ -185,7 +187,11 @@ const handleResponseData = (r) => {
   } else if (r.startsWith('SET')) {
     elapseTime.value = parseInt(r.substring(3))
   } else if (r.startsWith('SRT')) {
-    remainTime.value = parseInt(r.substring(3))
+    const newValue = parseInt(r.substring(3))
+    if (newValue != remainTime.value) {
+      remainTime.value = newValue
+      stopped.value = false
+    }
   }
   return
 }

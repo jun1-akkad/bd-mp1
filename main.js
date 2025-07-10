@@ -6,12 +6,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 開発環境の設定
-process.env.NODE_ENV = 'development';
+const isDev = process.env.NODE_ENV === 'development';
 
 function createWindow () {
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 460,
+    height: 810,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -20,10 +20,15 @@ function createWindow () {
     }
   });
 
-  win.loadURL('http://localhost:5173');
-
-  // 開発時はDevToolsを開く
-  win.webContents.openDevTools();
+  // 開発環境と本番環境で読み込むURLを分ける
+  if (isDev) {
+    win.loadURL('http://localhost:5173');
+    // 開発時はDevToolsを開く
+    win.webContents.openDevTools();
+  } else {
+    // 本番環境ではローカルのHTMLファイルを読み込む
+    win.loadFile(path.join(__dirname, 'dist', 'index.html'));
+  }
 
   // IPCイベントハンドラーを設定
   ipcMain.on('socket-data', (event, data) => {

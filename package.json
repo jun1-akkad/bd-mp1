@@ -2,24 +2,61 @@
   "name": "bd-mp1",
   "main": "main.js",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
+  "description": "BD-MP1 Controller Application",
+  "author": "Akkad LLC",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "electron": "electron .",
-    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\""
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron-build": "npm run build && electron-builder",
+    "electron-pack": "electron-builder"
+  },
+  "build": {
+    "appId": "jp.akkad.bd-mp1",
+    "productName": "BD-MP1",
+    "copyright": "Copyright © 2025 Akkad LLC",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.cjs",
+      "dist/**/*"
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.11",
     "net": "^1.0.2",
-    "tailwindcss": "^4.1.11",
+    "tailwindcss": "^3.4.0",
     "vue": "^3.5.17"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.0",
+    "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
     "electron": "^37.2.0",
+    "electron-builder": "^26.0.12",
+    "postcss": "^8.5.6",
     "vite": "^7.0.0",
     "wait-on": "^7.2.0"
   }
